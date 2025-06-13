@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const webhookController = require('../controllers/webhookController');
 
-// Webhook endpoint for receiving customer data
-router.post('/customer', webhookController.handleWebhook);
+// Webhook verification
+router.get('/webhook', webhookController.verifyWebhook);
+
+// Handle webhook data
+router.post('/webhook', webhookController.handleWebhook);
 
 module.exports = router; 
