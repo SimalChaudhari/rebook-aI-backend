@@ -1,52 +1,44 @@
 const Customer = require('../models/Customer');
+const Visit = require('../models/Visit');
+const Payment = require('../models/Payment');
 
 exports.getDashboardMetrics = async (req, res) => {
   try {
     const { businessId, startDate, endDate } = req.query;
     
-    // Validate businessId
-    if (!businessId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Business ID is required'
-      });
-    }
+    // Get customer statistics
+    const customerStats = await Customer.aggregate([
+      { $match: { businessId } },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          averageSpend: { $avg: '$spendingPattern.averageSpend' }
+        }
+      }
+    ]);
 
-    // Set default date range if not provided
-    const start = startDate ? new Date(startDate) : new Date(new Date().setMonth(new Date().getMonth() - 1));
-    const end = endDate ? new Date(endDate) : new Date();
-
-    // Get all customers for the business
-    const customers = await Customer.find({
-      businessId,
-      createdAt: { $gte: start, $lte: end }
-    });
-
-    // Calculate metrics
-    const metrics = {
-      retention: {
-        atRisk: customers.filter(c => c.status === 'At Risk').length,
-        lost: customers.filter(c => c.status === 'Lost').length,
-        recovered: customers.filter(c => c.status === 'Recovered').length
-      },
-      revenue: {
-        saved: calculateSavedRevenue(customers),
-        potentialLoss: calculatePotentialLoss(customers)
-      },
-      customerStatus: {
-        active: customers.filter(c => c.status === 'Active').length,
-        atRisk: customers.filter(c => c.status === 'At Risk').length,
-        lost: customers.filter(c => c.status === 'Lost').length,
-        new: customers.filter(c => c.status === 'New').length,
-        recovered: customers.filter(c => c.status === 'Recovered').length
-      },
-      ltv: calculateLTV(customers),
-      ratings: calculateRatingMetrics(customers)
+    // Calculate retention metrics
+    const retentionMetrics = {
+      recovered: await Customer.countDocuments({ businessId, status: 'Recovered' }),
+      atRisk: await Customer.countDocuments({ businessId, status: 'At Risk' }),
+      lost: await Customer.countDocuments({ businessId, status: 'Lost' })
     };
 
-    res.status(200).json({
+    // Calculate revenue metrics
+    const revenueMetrics = await calculateRevenueMetrics(businessId);
+
+    // Get LTV data
+    const ltvData = await calculateLTVMetrics(businessId, startDate, endDate);
+
+    res.json({
       success: true,
-      data: metrics
+      data: {
+        customerStats,
+        retentionMetrics,
+        revenueMetrics,
+        ltvData
+      }
     });
 
   } catch (error) {
@@ -58,6 +50,70 @@ exports.getDashboardMetrics = async (req, res) => {
     });
   }
 };
+
+// Calculate revenue metrics
+async function calculateRevenueMetrics(businessId) {
+  // Calculate saved revenue
+  const recoveredCustomers = await Customer.find({ 
+    businessId, 
+    status: 'Recovered' 
+  });
+
+  const savedRevenue = recoveredCustomers.reduce((total, customer) => 
+    total + (customer.spendingPattern?.averageSpend || 0) * 12, 0);
+
+  // Calculate potential lost revenue
+  const lostCustomers = await Customer.find({ 
+    businessId, 
+    status: 'Lost' 
+  });
+
+  const potentialLostRevenue = lostCustomers.reduce((total, customer) => 
+    total + (customer.spendingPattern?.averageSpend || 0) * 12, 0);
+
+  return {
+    savedRevenue,
+    potentialLostRevenue
+  };
+}
+
+// Calculate LTV metrics
+async function calculateLTVMetrics(businessId, startDate, endDate) {
+  try {
+    // Get all active customers
+    const activeCustomers = await Customer.find({ 
+      businessId, 
+      status: 'Active'
+    });
+
+    if (activeCustomers.length === 0) {
+      return {
+        averageLTV: 0,
+        totalCustomers: 0,
+        activeCustomers: 0
+      };
+    }
+
+    // Calculate total LTV
+    const totalLTV = activeCustomers.reduce((total, customer) => {
+      const avgPayment = customer.spendingPattern?.averageSpend || 0;
+      const visitFrequency = customer.averageVisitInterval || 30; // default to monthly
+      return total + (avgPayment * (12 / (visitFrequency / 30))); // normalize to monthly
+    }, 0);
+
+    // Get total customers count
+    const totalCustomers = await Customer.countDocuments({ businessId });
+
+    return {
+      averageLTV: totalLTV / activeCustomers.length,
+      totalCustomers,
+      activeCustomers: activeCustomers.length
+    };
+  } catch (error) {
+    console.error('Error calculating LTV metrics:', error);
+    throw error;
+  }
+}
 
 // Helper functions for calculations
 function calculateSavedRevenue(customers) {

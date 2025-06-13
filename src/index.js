@@ -50,9 +50,9 @@ mongoose.connect(process.env.MONGODB_URI, {
 // Routes
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/reviews', reviewRoutes);
+app.use('/api/review', reviewRoutes);
 app.use('/api/customers', customerRoutes);
-app.use('/api/referrals', referralRoutes);
+app.use('/api/referral', referralRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 

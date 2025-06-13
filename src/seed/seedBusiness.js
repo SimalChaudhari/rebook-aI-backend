@@ -7,6 +7,7 @@ dotenv.config();
 const testBusinesses = [
   {
     businessId: 'business123',
+    businessName: 'Test Salon',
     name: 'Test Salon',
     ownerName: 'Vishal',
     phoneNumber: '+919999999999',
@@ -16,6 +17,7 @@ const testBusinesses = [
   },
   {
     businessId: 'business124',
+    businessName: 'Beauty Hub',
     name: 'Beauty Hub',
     ownerName: 'Priya',
     phoneNumber: '+918888888888',

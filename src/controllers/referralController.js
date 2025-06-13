@@ -1,4 +1,5 @@
 const Customer = require('../models/Customer');
+const Business = require('../models/Business');
 const qrService = require('../services/qrService');
 const whatsappService = require('../services/whatsappService');
 const Referral = require('../models/Referral');
@@ -7,20 +8,29 @@ const Referral = require('../models/Referral');
 exports.generateReferral = async (req, res) => {
   try {
     const { businessId, customerId } = req.params;
-    const { businessName } = req.body;
 
+    // Find customer
     const customer = await Customer.findOne({ businessId, userId: customerId });
     if (!customer) {
       return res.status(404).json({
         success: false,
-        message: 'Customer not found......'
+        message: 'Customer not found'
+      });
+    }
+
+    // Find business
+    const business = await Business.findOne({ businessId });
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found'
       });
     }
 
     const { referralCode, referralLink, qrCode } = await qrService.createReferralLink(
       businessId,
       customerId,
-      businessName
+      business.name // Use business name from database
     );
 
     res.status(200).json({
@@ -133,4 +143,12 @@ exports.deleteReferral = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error deleting referral', error: error.message });
   }
+};
+
+// Handle referral link
+exports.handleReferralLink = async (req, res) => {
+  const { referralCode } = req.params;
+  // यहाँ आप referralCode से referral data निकाल सकते हैं, या redirect कर सकते हैं
+  // फिलहाल simple message दे रहे हैं
+  res.send(`<h2>Referral Link Active!</h2><p>Referral Code: ${referralCode}</p>`);
 }; 

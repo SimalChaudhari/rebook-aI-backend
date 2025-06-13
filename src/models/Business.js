@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const businessSchema = new mongoose.Schema({
   businessId: { type: String, required: true, unique: true },
+  businessName: { type: String },
   name: { type: String, required: true },
   ownerName: { type: String },
   phoneNumber: { type: String },
