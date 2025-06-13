@@ -2,7 +2,6 @@
 node_modules/
 
 # Environment variables
-.env
 
 # Logs
 logs/
@@ -28,3 +27,6 @@ coverage/
 
 # Seed DB output
 *.seed.js 
+temp_auto_push.bat
+temp_interactive_push.bat
+config.bat

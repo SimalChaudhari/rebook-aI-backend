@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const Customer = require('../models/Customer');
+const Service = require('../models/Service');
+const Rating = require('../models/Rating');
 require('dotenv').config();
 
 const testCustomers = [
@@ -14,34 +16,12 @@ const testCustomers = [
     lastService: 'Hair Cut',
     transactionValue: 500,
     status: 'Active',
-    visitHistory: [
-      {
-        date: new Date('2024-03-15'),
-        service: 'Hair Cut',
-        staff: 'Rajesh Kumar',
-        amount: 500
-      },
-      {
-        date: new Date('2024-02-15'),
-        service: 'Hair Cut',
-        staff: 'Rajesh Kumar',
-        amount: 500
-      }
-    ],
     averageVisitInterval: 30,
-    preferredServices: ['Hair Cut', 'Hair Spa'],
     spendingPattern: {
       averageSpend: 500,
       totalSpent: 1000,
       lastPayment: 500
     },
-    ratings: [
-      {
-        date: new Date('2024-03-15'),
-        rating: 5,
-        feedback: 'Excellent service, very professional'
-      }
-    ],
     averageRating: 5,
     lastRating: 5,
     lastExperience: 'Positive'
@@ -57,34 +37,12 @@ const testCustomers = [
     lastService: 'Hair Color',
     transactionValue: 2000,
     status: 'At Risk',
-    visitHistory: [
-      {
-        date: new Date('2024-02-01'),
-        service: 'Hair Color',
-        staff: 'Sunita Sharma',
-        amount: 2000
-      },
-      {
-        date: new Date('2024-01-01'),
-        service: 'Hair Cut',
-        staff: 'Sunita Sharma',
-        amount: 500
-      }
-    ],
     averageVisitInterval: 30,
-    preferredServices: ['Hair Color', 'Hair Spa'],
     spendingPattern: {
       averageSpend: 1250,
       totalSpent: 2500,
       lastPayment: 2000
     },
-    ratings: [
-      {
-        date: new Date('2024-02-01'),
-        rating: 4,
-        feedback: 'Good service, friendly staff'
-      }
-    ],
     averageRating: 4,
     lastRating: 4,
     lastExperience: 'Positive'
@@ -100,28 +58,12 @@ const testCustomers = [
     lastService: 'Hair Cut',
     transactionValue: 500,
     status: 'Lost',
-    visitHistory: [
-      {
-        date: new Date('2024-01-01'),
-        service: 'Hair Cut',
-        staff: 'Rajesh Kumar',
-        amount: 500
-      }
-    ],
     averageVisitInterval: 30,
-    preferredServices: ['Hair Cut'],
     spendingPattern: {
       averageSpend: 500,
       totalSpent: 500,
       lastPayment: 500
     },
-    ratings: [
-      {
-        date: new Date('2024-01-01'),
-        rating: 3,
-        feedback: 'Average service, could be better'
-      }
-    ],
     averageRating: 3,
     lastRating: 3,
     lastExperience: 'Negative'
@@ -144,6 +86,12 @@ async function seedDatabase() {
     // Insert test data
     await Customer.insertMany(testCustomers);
     console.log('Test data inserted successfully');
+
+    // सारी services लाने के लिए
+    const services = await Service.find({ customerId: 'cust001', businessId: 'business123' });
+
+    // सारी ratings लाने के लिए
+    const ratings = await Rating.find({ customerId: 'cust001', businessId: 'business123' });
 
     // Disconnect from MongoDB
     await mongoose.disconnect();
