@@ -1,40 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const whatsappService = require('../services/whatsappService');
+const whatsappController = require('../controllers/whatsappController');
 
-// Test WhatsApp integration
-router.post('/test', async (req, res) => {
-  try {
-    const { phoneNumber } = req.body;
-    
-    if (!phoneNumber) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number is required'
-      });
-    }
+// Template message route
+router.post('/send-template', whatsappController.sendTemplateMessage);
 
-    const success = await whatsappService.testWhatsApp(phoneNumber);
+// Text message route
+router.post('/send-text', whatsappController.sendTextMessage);
 
-    if (success) {
-      res.json({
-        success: true,
-        message: 'Test message sent successfully'
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to send test message'
-      });
-    }
-  } catch (error) {
-    console.error('Error in test route:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error sending test message',
-      error: error.message
-    });
-  }
-});
+// Check number status
+router.post('/check-number', whatsappController.checkNumberStatus);
+
+// Get message status
+router.get('/message-status/:messageId', whatsappController.getMessageStatus);
 
 module.exports = router; 

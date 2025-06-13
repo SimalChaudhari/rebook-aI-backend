@@ -1,11 +1,12 @@
+require('dotenv').config();
 const axios = require('axios');
 const Business = require('../models/Business');
 const Customer = require('../models/Customer');
 
 class WhatsAppService {
   constructor() {
-    this.apiKey = 'ymWPt3GJehmPFw4cYrckhm6pAK';
-    this.baseURL = 'https://waba-v2.360dialog.io';
+    this.apiKey = process.env.WHATSAPP_API_KEY;
+    this.baseURL = process.env.WHATSAPP_BASE_URL;
     this.client = axios.create({
       baseURL: this.baseURL,
       headers: {
@@ -27,82 +28,18 @@ class WhatsAppService {
   async checkNumberStatus(phoneNumber) {
     try {
       const formattedNumber = this.formatPhoneNumber(phoneNumber);
-      // console.log('Checking number status:', formattedNumber);
+      console.log('Checking number status:', formattedNumber);
 
       const response = await this.client.post('/contacts', {
         blocking: 'wait',
         contacts: [formattedNumber]
       });
 
-      // console.log('Number status response:', JSON.stringify(response.data, null, 2));
+      console.log('Number status response:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       console.error('Error checking number status:', error.response?.data || error.message);
       return null;
-    }
-  }
-
-  // Simple test message
-  async testWhatsApp(to) {
-    try {
-      const formattedNumber = this.formatPhoneNumber(to);
-      if (!formattedNumber) {
-        throw new Error('Invalid phone number');
-      }
-
-      // console.log('=== WhatsApp Test Details ===');
-      // console.log('Phone Number:', formattedNumber);
-      // console.log('API Key:', this.apiKey);
-      // console.log('Base URL:', this.baseURL);
-
-      // Try template message first
-      const templatePayload = {
-        messaging_product: 'whatsapp',
-        to: formattedNumber,
-        type: 'template',
-        template: {
-          name: 'hello_world',
-          language: {
-            code: 'en'
-          }
-        }
-      };
-
-      // console.log('Template Request Payload:', JSON.stringify(templatePayload, null, 2));
-
-      try {
-        const templateResponse = await this.client.post('/messages', templatePayload);
-        // console.log('Template Response:', JSON.stringify(templateResponse.data, null, 2));
-        return true;
-      } catch (templateError) {
-        // console.log('Template message failed, trying text message...');
-        
-        // Fallback to text message
-        const textPayload = {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: formattedNumber,
-          type: 'text',
-          text: {
-            preview_url: false,
-            body: 'Hello! This is a test message from Rebook AI.'
-          }
-        };
-
-        // console.log('Text Request Payload:', JSON.stringify(textPayload, null, 2));
-        const textResponse = await this.client.post('/messages', textPayload);
-        // console.log('Text Response:', JSON.stringify(textResponse.data, null, 2));
-        return true;
-      }
-    } catch (error) {
-      console.error('=== Error Details ===');
-      console.error('Error Message:', error.message);
-      if (error.response) {
-        console.error('Error Response:', error.response.data);
-        console.error('Error Status:', error.response.status);
-        console.error('Error Headers:', error.response.headers);
-      }
-      return false;
     }
   }
 
@@ -114,10 +51,10 @@ class WhatsAppService {
         throw new Error('Invalid phone number');
       }
 
-      // console.log('=== Sending WhatsApp Message ===');
-      // console.log('To:', formattedNumber);
-      // console.log('Message:', message);
-      // console.log('Type:', type);
+      console.log('=== Sending WhatsApp Message ===');
+      console.log('To:', formattedNumber);
+      console.log('Message:', message);
+      console.log('Type:', type);
 
       const payload = {
         messaging_product: 'whatsapp',
@@ -131,7 +68,7 @@ class WhatsAppService {
       };
 
       const response = await this.client.post('/messages', payload);
-      // console.log('Message Response:', JSON.stringify(response.data, null, 2));
+      console.log('Message Response:', JSON.stringify(response.data, null, 2));
 
       return true;
     } catch (error) {
@@ -141,24 +78,30 @@ class WhatsAppService {
   }
 
   // Send template message
-  async sendTemplateMessage(to, templateName, languageCode, components) {
+  async sendTemplateMessage(to, templateName, parameters) {
     try {
+      const formattedNumber = this.formatPhoneNumber(to);
       const response = await this.client.post('/messages', {
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: to,
-        type: 'template',
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: formattedNumber,
+        type: "template",
         template: {
           name: templateName,
           language: {
-            code: languageCode
+            code: "en"
           },
-          components: components
+          components: [
+            {
+              type: "body",
+              parameters: parameters
+            }
+          ]
         }
       });
       return response.data;
     } catch (error) {
-      console.error('Error sending WhatsApp template:', error);
+      console.error('Error sending template:', error);
       throw error;
     }
   }
@@ -203,6 +146,42 @@ class WhatsAppService {
       return response.data;
     } catch (error) {
       console.error('Error getting message status:', error);
+      throw error;
+    }
+  }
+
+  // Send welcome template message
+  async sendWelcomeTemplate(phoneNumber, customerName) {
+    try {
+      const response = await this.client.post('/messages', {
+        messaging_product: "whatsapp",
+        to: phoneNumber,
+        type: "template",
+        template: {
+          name: "welcome_message",
+          language: {
+            code: "en"
+          },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                {
+                  type: "text",
+                  text: customerName
+                },
+                {
+                  type: "text",
+                  text: "Rebook AI"
+                }
+              ]
+            }
+          ]
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending welcome template:', error);
       throw error;
     }
   }

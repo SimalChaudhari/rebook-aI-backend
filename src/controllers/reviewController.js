@@ -1,10 +1,12 @@
 const Customer = require('../models/Customer');
 const whatsappService = require('../services/whatsappService');
+const Business = require('../models/Business');
+const Rating = require('../models/Rating');
 
 // Request review from customer
 exports.requestReview = async (req, res) => {
   try {
-    const { businessId, customerId, businessName } = req.body;
+    const { businessId, customerId } = req.body;
 
     const customer = await Customer.findOne({ businessId, userId: customerId });
     if (!customer) {
@@ -14,8 +16,16 @@ exports.requestReview = async (req, res) => {
       });
     }
 
+    const business = await Business.findOne({ businessId });
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found'
+      });
+    }
+
     // Send WhatsApp message requesting review
-    const sent = await whatsappService.sendReviewRequest(customer, businessName);
+    const sent = await whatsappService.sendReviewRequest(customer, business.name);
 
     if (!sent) {
       return res.status(500).json({
@@ -41,7 +51,7 @@ exports.requestReview = async (req, res) => {
 // Submit review
 exports.submitReview = async (req, res) => {
   try {
-    const { businessId, customerId, rating, feedback, businessName, reviewLink } = req.body;
+    const { businessId, customerId, rating, reviewText } = req.body;
 
     const customer = await Customer.findOne({ businessId, userId: customerId });
     if (!customer) {
@@ -51,22 +61,36 @@ exports.submitReview = async (req, res) => {
       });
     }
 
-    // Update customer's rating
-    customer.ratings.push({
+    // नया Rating create करें
+    const newRating = new Rating({
+      businessId,
+      customerId,
       rating,
-      feedback,
+      feedback: reviewText,
       date: new Date()
     });
+    await newRating.save();
 
+    // Customer के ratings array में ObjectId push करें
+    if (!customer.ratings) customer.ratings = [];
+    customer.ratings.push(newRating._id);
+    customer.averageRating = rating;
+    customer.lastRating = rating;
+    customer.lastExperience = rating >= 4 ? 'Positive' : 'Negative';
     await customer.save();
+    const reviewLink = `${process.env.FRONTEND_URL}/review/${businessId}/${customerId}`;
 
     // Handle different rating scenarios
     if (rating >= 4) {
-      // Send thank you message with review link for positive ratings
-      await whatsappService.sendThankYouMessage(customer, businessName, reviewLink);
+      const business = await Business.findOne({ businessId });
+      if (business) {
+        await whatsappService.sendThankYouMessage(customer, business.name, reviewLink);
+      }
     } else if (rating <= 2) {
-      // Notify business owner about low ratings
-      await whatsappService.notifyBusinessOwner(customer, rating, feedback);
+      const business = await Business.findOne({ businessId });
+      if (business) {
+        await whatsappService.notifyBusinessOwner(customer, rating, reviewText);
+      }
     }
 
     res.status(200).json({
